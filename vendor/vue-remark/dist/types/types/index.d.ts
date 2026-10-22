@@ -1,0 +1,30 @@
+import type { Component } from 'vue';
+export interface NodeComponents extends Record<string, Component> {
+    heading: Component;
+    paragraph: Component;
+    text: Component;
+    list: Component;
+    listItem: Component;
+    link: Component;
+    image: Component;
+    strong: Component;
+    emphasis: Component;
+    inlineCode: Component;
+    code: Component;
+    blockquote: Component;
+    thematicBreak: Component;
+    table: Component;
+    tableRow: Component;
+    tableCell: Component;
+    delete: Component;
+    math: Component;
+    inlineMath: Component;
+    html: Component;
+    break: Component;
+    definition: Component;
+    footnoteDefinition: Component;
+    footnoteReference: Component;
+    imageReference: Component;
+    linkReference: Component;
+    yaml: Component;
+}

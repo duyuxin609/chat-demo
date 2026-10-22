@@ -1,0 +1,88 @@
+diff --git a/node_modules/@microsoft/fetch-event-source/lib/cjs/parse.js b/node_modules/@microsoft/fetch-event-source/lib/cjs/parse.js
+index 0db16d9..60b6cb3 100644
+--- a/node_modules/@microsoft/fetch-event-source/lib/cjs/parse.js
++++ b/node_modules/@microsoft/fetch-event-source/lib/cjs/parse.js
+@@ -78,9 +78,7 @@ function getMessages(onId, onRetry, onMessage) {
+             const value = decoder.decode(line.subarray(valueOffset));
+             switch (field) {
+                 case 'data':
+-                    message.data = message.data
+-                        ? message.data + '\n' + value
+-                        : value;
++                    message.data = value;
+                     break;
+                 case 'event':
+                     message.event = value;
+@@ -105,12 +103,21 @@ function concat(a, b) {
+     res.set(b, a.length);
+     return res;
+ }
++class Message {
++    constructor(){
++        this._data = [];
++        this.event = '';
++        this.id = '';
++        this.retry = undefined;
++    }
++    get data() {
++        return this._data.join('\n');
++    }
++    set data(value) {
++        this._data.push(value)
++    }
++}
+ function newMessage() {
+-    return {
+-        data: '',
+-        event: '',
+-        id: '',
+-        retry: undefined,
+-    };
++    return new Message()
+ }
+ //# sourceMappingURL=parse.js.map
+\ No newline at end of file
+diff --git a/node_modules/@microsoft/fetch-event-source/lib/esm/parse.js b/node_modules/@microsoft/fetch-event-source/lib/esm/parse.js
+index dfceafb..fb1ae4e 100644
+--- a/node_modules/@microsoft/fetch-event-source/lib/esm/parse.js
++++ b/node_modules/@microsoft/fetch-event-source/lib/esm/parse.js
+@@ -73,9 +73,7 @@ export function getMessages(onId, onRetry, onMessage) {
+             const value = decoder.decode(line.subarray(valueOffset));
+             switch (field) {
+                 case 'data':
+-                    message.data = message.data
+-                        ? message.data + '\n' + value
+-                        : value;
++                    message.data = value;
+                     break;
+                 case 'event':
+                     message.event = value;
+@@ -99,12 +97,21 @@ function concat(a, b) {
+     res.set(b, a.length);
+     return res;
+ }
++class Message {
++    constructor(){
++        this._data = [];
++        this.event = '';
++        this.id = '';
++        this.retry = undefined;
++    }
++    get data() {
++        return this._data.join('\n');
++    }
++    set data(value) {
++        this._data.push(value)
++    }
++}
+ function newMessage() {
+-    return {
+-        data: '',
+-        event: '',
+-        id: '',
+-        retry: undefined,
+-    };
++    return new Message()
+ }
+ //# sourceMappingURL=parse.js.map
+\ No newline at end of file

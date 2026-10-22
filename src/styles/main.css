@@ -1,0 +1,20 @@
+/* 简易 reset + 布局工具类（不依赖 tailwind，保证客户开箱即用） */
+* { box-sizing: border-box; }
+html, body, #app { height: 100%; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: #1f2937;
+  background: #f9fafb;
+}
+
+/* markdown 容器：具体元素样式由 Markdown/Nodes 各组件负责（与 epsilon-web 一致） */
+.prose { line-height: 1.75; font-size: 14px; }
+.prose-sm { font-size: 14px; }
+.max-w-none { max-width: none; }
+
+/* cite 标记颜色 */
+.bg-westlake-blue { background-color: #009dab; }
+
+/* 滚动条美化 */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
