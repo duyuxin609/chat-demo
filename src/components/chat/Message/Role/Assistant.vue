@@ -7,6 +7,7 @@ import { computed, ref } from 'vue'
 import Markdown from '@/components/common/Markdown/index.vue'
 import { parseJson } from '@/utils/misc'
 import Thinking from '../Thinking.vue'
+import ThinkBlock from '../ThinkBlock.vue'
 import Toolcall from '../Toolcall/index.vue'
 
 const props = defineProps<{ item: Message }>()
@@ -70,7 +71,80 @@ function filterCites(text?: string): string {
     return /^[a-z0-9]{8}$/.test(id) && evidenceHashSet.value.has(id) ? m : ''
   })
 }
-const filteredContent = computed(() => filterCites(normalizedContent.value))
+interface Segment {
+  type: 'think' | 'answer'
+  text: string
+  /** 流式中还没出现 </think>，思考尚未结束 */
+  streaming: boolean
+}
+
+/**
+ * 把正文按 <think>...</think> 切成「思考」和「回答」两类片段。
+ * - 流式过程中可能只有 <think> 没有闭合标签
+ * - 网关在思考结束、正文开始时可能只补一个 </think>，开头要先清掉
+ */
+function splitThink(raw: string): Segment[] {
+  const text = raw.replace(/^\s*<\/think>\s*/i, '')
+  const out: Segment[] = []
+  const re = /<think>([\s\S]*?)(<\/think>|$)/gi
+  let last = 0
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) {
+      out.push({ type: 'answer', text: text.slice(last, m.index), streaming: false })
+    }
+    out.push({ type: 'think', text: m[1], streaming: !m[2] })
+    last = m.index + m[0].length
+    if (!m[2]) break
+  }
+  if (last < text.length) {
+    out.push({ type: 'answer', text: text.slice(last), streaming: false })
+  }
+  return out
+}
+
+const parts = computed<Segment[]>(() => splitThink(normalizedContent.value))
+
+const PLACEHOLDER_RE = /->\[[^\]]+\]/g
+
+/** 取出片段里的工具占位符（保持顺序） */
+function extractPlaceholders(text: string): string {
+  return (text.match(PLACEHOLDER_RE) || []).join('\n\n')
+}
+
+/** 确保占位符独占一行，remark-teleport 才能解析；否则会以纯文本显示 */
+function normalizePlaceholders(text: string): string {
+  return text.replace(PLACEHOLDER_RE, m => `\n\n${m}\n\n`)
+}
+
+/** 一条消息里所有思考内容合并成一个块，统一放在正文前面（思考里的占位符不显示） */
+const thinkText = computed(() =>
+  parts.value
+    .filter(s => s.type === 'think')
+    .map(s => s.text.replace(PLACEHOLDER_RE, '').trim())
+    .filter(Boolean)
+    .join('\n\n'),
+)
+const thinkStreaming = computed(() => parts.value.some(s => s.type === 'think' && s.streaming))
+
+/**
+ * 回答正文：去掉思考文字，但保留思考块里的工具占位符。
+ * 模型经常在 <think> 还没闭合时就写 ->[call_xxx]，占位符跟着思考一起被折叠掉，
+ * 正文里就找不到锚点，工具卡片也就插不进去了。
+ */
+const answerContent = computed(() =>
+  normalizePlaceholders(
+    parts.value
+      .map(s => (s.type === 'think' ? extractPlaceholders(s.text) : s.text))
+      .join('\n\n'),
+  ),
+)
+
+/** 回答片段（保留引用过滤） */
+const answerSegments = computed(() => {
+  const text = filterCites(answerContent.value)
+  return text.trim() === '' ? [] : [{ type: 'answer' as const, text, streaming: false }]
+})
 
 const evidenceHash = ref('')
 const evidence = computed(() => evidences.value.find(e => e.hash === evidenceHash.value))
@@ -115,7 +189,7 @@ watch(() => props.item.content, (newVal, oldVal) => {
 <template>
   <div style="min-width:40px;max-width:calc(100% - 3.5rem);margin-right:auto;">
     <div style="display:flex;">
-      <div style="max-width:100%;font-size:15px;background:#fff;color:#1f2937;padding:20px;border-radius:16px;border-top-left-radius:4px;box-shadow:0 1px 2px 0 rgb(0 0 0 / 0.05);border:1px solid rgb(243 244 246 / 0.5);">
+      <div style="width:100%;min-width:0;max-width:100%;font-size:15px;background:#fff;color:#1f2937;padding:20px;border-radius:16px;border-top-left-radius:4px;box-shadow:0 1px 2px 0 rgb(0 0 0 / 0.05);border:1px solid rgb(243 244 246 / 0.5);">
         <Transition mode="out-in" name="fade">
           <template v-if="!content">
             <div key="thinking">
@@ -124,9 +198,16 @@ watch(() => props.item.content, (newVal, oldVal) => {
           </template>
           <template v-else>
             <div key="content">
+              <ThinkBlock
+                v-if="thinkText || thinkStreaming"
+                :text="thinkText"
+                :streaming="thinkStreaming && isTalking"
+              />
               <Markdown
+                v-for="(seg, i) in answerSegments"
+                :key="i"
                 :allow-dangerous-html="true"
-                :text="filteredContent"
+                :text="seg.text"
                 class="prose prose-sm max-w-none"
                 @click="delegateAnchorClick"
               />

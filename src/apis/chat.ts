@@ -100,6 +100,24 @@ export async function createSession(params: CreateSessionParams): Promise<string
  * 请求体：{ query }（注意：不是 messages）
  * SSE 事件：msg_id / (空)=增量正文 / meta{toolcall,finish,error} / debug
  */
+/**
+ * 把后端的技术性错误文案换成客户能看懂的话。
+ * 上游断流（EOF）目前会以 "Upstream Closed" / "incomplete answer" 这类形式透传，
+ * 对最终用户展示成「本次回答未完成，请重试」即可。
+ */
+function friendlyError(message?: string): string {
+  const m = (message || '').toLowerCase()
+  if (
+    m.includes('upstream closed')
+    || m.includes('eof')
+    || m.includes('incomplete')
+    || m.includes('stream ended')
+  ) {
+    return '本次回答未完成，请重试'
+  }
+  return message || '对话出错，请稍后重试'
+}
+
 export async function chat(
   request: ChatRequest,
   controller: AbortController,
@@ -160,7 +178,7 @@ export async function chat(
             }
             else if (key === 'error') {
               data.error = true
-              data.errorMessage = String(metaData[key] ?? '对话出错')
+              data.errorMessage = friendlyError(String(metaData[key] ?? ''))
             }
           })
           break
@@ -182,7 +200,7 @@ export async function chat(
     }
     else {
       data.error = true
-      data.errorMessage = error instanceof HttpError ? error.message : (data.errorMessage || '对话错误，请稍后重试')
+      data.errorMessage = friendlyError(error instanceof HttpError ? error.message : data.errorMessage)
     }
     if (!(error instanceof HttpError) && !controller.signal.aborted) console.error(error)
   })
