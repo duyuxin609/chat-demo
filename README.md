@@ -16,13 +16,13 @@ npm run dev        # 默认端口 5173
 
 ## 配置后端地址
 
-打开 `vite.config.ts`，把代理 `target` 改成你的 epsilon-openapi 地址：
+打开 `vite.config.ts`，把代理 `target` 改成你的 epsilon-openapi 地址（也可以通过环境变量 `VITE_API_TARGET` 指定，默认 `http://localhost:8172`）：
 
 ```ts
 server: {
   proxy: {
     '/v1': {
-      target: 'http://你的openapi地址:端口',   // ← 改这里，默认 http://192.168.10.15:8172
+      target: 'http://你的openapi地址:端口',   // ← 改这里
       changeOrigin: true,
     },
   },
@@ -30,7 +30,7 @@ server: {
 ```
 
 > 前端请求 `/v1/*` 会被转发到 `${target}/v1/*`，开发期无跨域问题。
-> 若要让前端**直连**后端，改 `src/apis/chat.ts` 的 `chatConfig.baseUrl` 为完整地址（如 `http://192.168.10.15:8172/v1`），此时需后端配 CORS。
+> 若要让前端**直连**后端，改 `src/apis/chat.ts` 的 `chatConfig.baseUrl` 为完整地址（如 `http://你的openapi地址:端口/v1`），此时需后端配 CORS。
 
 ## 鉴权
 

@@ -13,8 +13,10 @@ export default defineConfig({
     port: 5173,
     proxy: {
       // 前端请求 /v1/* 会被转发到 epsilon-openapi 服务
+      // 部署到自己的环境时，用环境变量 VITE_API_TARGET 指定地址，例如：
+      //   VITE_API_TARGET=https://your-openapi-host
       '/v1': {
-        target: process.env.VITE_API_TARGET || 'http://192.168.10.15:8172',
+        target: process.env.VITE_API_TARGET || 'http://localhost:8172',
         changeOrigin: true,
       },
     },
